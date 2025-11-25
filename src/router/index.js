@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import Home from '../views/Home.vue';
 import PetUpload from '../views/PetUpload.vue';
 import Filter from '../views/Filter.vue';
 import Login from '../views/Login.vue';
@@ -8,7 +9,8 @@ import Donate from '../views/Donate.vue';
 const routes = [
     {
         path: '/',
-        redirect: '/pet-upload'
+        name: 'Home',
+        component: Home
     },
     {
         path: '/pet-upload',

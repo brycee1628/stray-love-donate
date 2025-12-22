@@ -75,46 +75,44 @@
       </div>
     </section>
 
-    <!-- 精選待領養毛孩（靜態示意） -->
+    <!-- 精選待領養毛孩 -->
     <section class="section">
       <div class="section-header">
         <h2 class="section-title">精選待領養毛孩</h2>
         <router-link to="/filter" class="link-more">查看更多毛孩 ></router-link>
       </div>
-      <div class="pet-grid">
-        <article class="pet-card-list">
-          <div class="pet-photo dog"></div>
+
+      <!-- 載入中 -->
+      <div v-if="loading" class="loading-message">
+        載入中...
+      </div>
+
+      <!-- 錯誤訊息 -->
+      <div v-if="error" class="error-message">
+        {{ error }}
+      </div>
+
+      <!-- 寵物列表 -->
+      <div v-if="!loading && !error" class="pet-grid">
+        <article v-for="pet in featuredPets" :key="pet.id" class="pet-card-list">
+          <div class="pet-photo" :class="getSpeciesClass(pet.species)">
+            <img v-if="pet.mainPhoto" :src="pet.mainPhoto" :alt="pet.name" />
+          </div>
           <div class="pet-body">
-            <h3>球球 · 中型犬 · 2 歲</h3>
-            <p>個性穩定、已完成基本訓練，適合第一次養狗的家庭。</p>
+            <h3>{{ formatPetTitle(pet) }}</h3>
+            <p>{{ pet.description || '等待一個溫暖的家' }}</p>
             <div class="pet-meta">
-              <span class="tag">台中西屯</span>
-              <span class="tag tag-green">疫苗齊全</span>
+              <span class="tag">{{ pet.location || '未指定地區' }}</span>
+              <span v-if="pet.isVaccinated" class="tag tag-green">疫苗齊全</span>
+              <span v-if="pet.isNeutered" class="tag">已結紮</span>
             </div>
           </div>
         </article>
-        <article class="pet-card-list">
-          <div class="pet-photo cat"></div>
-          <div class="pet-body">
-            <h3>奶茶 · 家貓 · 1 歲</h3>
-            <p>黏人小公主，適合室內安靜環境，已結紮與施打疫苗。</p>
-            <div class="pet-meta">
-              <span class="tag">新北板橋</span>
-              <span class="tag">室內貓</span>
-            </div>
-          </div>
-        </article>
-        <article class="pet-card-list">
-          <div class="pet-photo other"></div>
-          <div class="pet-body">
-            <h3>小乖 · 米克斯 · 6 個月</h3>
-            <p>活潑好動，適合喜歡戶外活動的你，期待一起探索世界。</p>
-            <div class="pet-meta">
-              <span class="tag">高雄左營</span>
-              <span class="tag">幼犬</span>
-            </div>
-          </div>
-        </article>
+
+        <!-- 沒有資料 -->
+        <div v-if="featuredPets.length === 0" class="empty-message">
+          <p>目前還沒有待領養的毛孩，<router-link to="/pet-upload">成為第一個上架的人</router-link>！</p>
+        </div>
       </div>
     </section>
 
@@ -128,13 +126,78 @@
         <router-link to="/donate" class="btn primary">前往捐款平台</router-link>
       </div>
     </section>
+
   </div>
 </template>
 
-<script>
-export default {
-  name: 'Home'
+<script setup>
+import { ref, onMounted } from 'vue';
+import { getAllPets, getPetPhotos } from '../utils/pets.js';
+
+const featuredPets = ref([]);
+const loading = ref(true);
+const error = ref('');
+
+// 載入精選寵物
+async function loadFeaturedPets() {
+  loading.value = true;
+  error.value = '';
+
+  try {
+    const result = await getAllPets(3);
+
+    if (result.success) {
+      // 為每個寵物載入第一張照片
+      const petsWithPhotos = await Promise.all(
+        result.pets.map(async (pet) => {
+          const photoResult = await getPetPhotos(pet.id);
+          return {
+            ...pet,
+            mainPhoto: photoResult.success && photoResult.photos.length > 0
+              ? photoResult.photos[0].photoUrl
+              : null
+          };
+        })
+      );
+      featuredPets.value = petsWithPhotos;
+    } else {
+      error.value = result.message;
+    }
+  } catch (err) {
+    console.error('載入寵物失敗:', err);
+    error.value = '載入寵物資料失敗，請稍後再試';
+  } finally {
+    loading.value = false;
+  }
 }
+
+// 格式化寵物標題
+function formatPetTitle(pet) {
+  const parts = [pet.name];
+  if (pet.breed) parts.push(pet.breed);
+  if (pet.size) {
+    const sizeMap = { small: '小型', medium: '中型', large: '大型' };
+    parts.push(sizeMap[pet.size] || pet.size);
+  }
+  if (pet.age !== null && pet.age !== undefined) {
+    parts.push(`${pet.age} 歲`);
+  }
+  return parts.join(' · ');
+}
+
+// 取得種類樣式類別
+function getSpeciesClass(species) {
+  const classMap = {
+    dog: 'dog',
+    cat: 'cat',
+    other: 'other'
+  };
+  return classMap[species] || 'other';
+}
+
+onMounted(() => {
+  loadFeaturedPets();
+});
 </script>
 
 <style scoped>
@@ -438,6 +501,14 @@ export default {
 .pet-photo {
   height: 120px;
   background: linear-gradient(135deg, #f97316, #fbbf24);
+  position: relative;
+  overflow: hidden;
+}
+
+.pet-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .pet-photo.cat {
@@ -446,6 +517,31 @@ export default {
 
 .pet-photo.other {
   background: linear-gradient(135deg, #22c55e, #14b8a6);
+}
+
+.loading-message,
+.error-message,
+.empty-message {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6b7280;
+}
+
+.error-message {
+  color: #ef4444;
+  background: #fee2e2;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #fca5a5;
+}
+
+.empty-message a {
+  color: #16a085;
+  text-decoration: none;
+}
+
+.empty-message a:hover {
+  text-decoration: underline;
 }
 
 .pet-body {
@@ -528,4 +624,3 @@ export default {
   }
 }
 </style>
-

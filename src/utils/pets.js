@@ -52,21 +52,38 @@ export async function createPetPhoto(photoData) {
 }
 
 // 取得所有寵物（用於首頁顯示）
-export async function getAllPets(limitCount = 10) {
+// limitCount: 限制數量，如果設為很大的數字（如 1000）或 undefined 則獲取所有寵物
+export async function getAllPets(limitCount = 1000) {
     try {
-        // 先嘗試使用 orderBy，如果失敗則在客戶端排序
         let querySnapshot;
-        try {
-            const q = query(
-                petsCollection,
-                orderBy('createTime', 'desc'),
-                limit(limitCount)
-            );
-            querySnapshot = await getDocs(q);
-        } catch (orderByError) {
-            // 如果 orderBy 失敗（可能是因為沒有索引），則取得所有資料並在客戶端排序
-            console.warn('使用 orderBy 失敗，改為客戶端排序:', orderByError);
-            querySnapshot = await getDocs(petsCollection);
+
+        // 如果 limitCount 很大（>= 1000），則獲取所有資料
+        if (limitCount >= 1000) {
+            try {
+                // 先嘗試使用 orderBy
+                const q = query(
+                    petsCollection,
+                    orderBy('createTime', 'desc')
+                );
+                querySnapshot = await getDocs(q);
+            } catch (orderByError) {
+                // 如果 orderBy 失敗，則取得所有資料
+                console.warn('使用 orderBy 失敗，改為獲取所有資料:', orderByError);
+                querySnapshot = await getDocs(petsCollection);
+            }
+        } else {
+            // 限制數量時使用 limit
+            try {
+                const q = query(
+                    petsCollection,
+                    orderBy('createTime', 'desc'),
+                    limit(limitCount)
+                );
+                querySnapshot = await getDocs(q);
+            } catch (orderByError) {
+                console.warn('使用 orderBy 失敗，改為客戶端排序:', orderByError);
+                querySnapshot = await getDocs(petsCollection);
+            }
         }
 
         let pets = querySnapshot.docs.map(doc => ({
@@ -83,8 +100,10 @@ export async function getAllPets(limitCount = 10) {
             });
         }
 
-        // 限制數量
-        pets = pets.slice(0, limitCount);
+        // 只有在 limitCount < 1000 時才限制數量
+        if (limitCount < 1000) {
+            pets = pets.slice(0, limitCount);
+        }
 
         return {
             success: true,

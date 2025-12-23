@@ -138,8 +138,12 @@
 
 <script setup>
 import { ref, reactive } from 'vue';
+import { useRouter } from 'vue-router';
 import { createPet, createPetPhoto } from '../utils/pets.js';
 import { uploadPetPhoto } from '../utils/storage.js';
+import { validatePetData } from '../utils/validation.js';
+
+const router = useRouter();
 
 // 表單資料
 const formData = reactive({
@@ -210,6 +214,7 @@ function removePhoto(index) {
 function validateForm() {
   errors.value = [];
 
+  // 基本欄位驗證
   if (!formData.name.trim()) {
     errors.value.push('請輸入寵物名稱');
   }
@@ -236,6 +241,17 @@ function validateForm() {
 
   if (photos.value.length === 0) {
     errors.value.push('請至少上傳一張照片');
+  }
+
+  // 合規性預檢：檢查禁止關鍵字（UC-02）
+  const validation = validatePetData({
+    name: formData.name,
+    description: formData.description,
+    breed: formData.breed
+  });
+
+  if (!validation.valid) {
+    errors.value.push(...validation.errors);
   }
 
   return errors.value.length === 0;
@@ -333,11 +349,19 @@ async function handleSubmit() {
     if (successCount > 0) {
       successMessage.value = `寵物資料已成功提交！已上傳 ${successCount} 張照片。${failCount > 0 ? `（${failCount} 張照片上傳失敗）` : ''}`;
       resetForm();
+      // 2 秒後跳轉回首頁
+      setTimeout(() => {
+        router.push('/');
+      }, 2000);
     } else if (failCount > 0) {
       errors.value.push('寵物資料已建立，但所有照片上傳失敗。請檢查 Firebase Storage 設置。');
     } else {
       successMessage.value = '寵物資料已成功提交！';
       resetForm();
+      // 2 秒後跳轉回首頁
+      setTimeout(() => {
+        router.push('/');
+      }, 2000);
     }
   } catch (error) {
     console.error('提交失敗:', error);

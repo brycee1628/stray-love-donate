@@ -13,21 +13,39 @@
         <p class="hero-note">目前已媒合超過 <span>120+</span> 隻毛孩找到新家</p>
       </div>
       <div class="hero-illustration">
-        <div class="pet-card main">
-          <div class="pet-avatar dog"></div>
+        <!-- 主要寵物卡片 -->
+        <div v-if="heroPets[0]" class="pet-card main">
+          <div class="pet-avatar" :class="getSpeciesClass(heroPets[0].species)">
+            <img v-if="heroPets[0].mainPhoto" :src="heroPets[0].mainPhoto" :alt="heroPets[0].name" />
+          </div>
           <div class="pet-info">
-            <h3>丸子 · 混種犬</h3>
-            <p>親人親狗，適合有院子的家庭</p>
+            <h3>{{ formatPetTitle(heroPets[0]) }}</h3>
+            <p>{{ heroPets[0].description || '等待一個溫暖的家' }}</p>
             <span class="tag tag-green">待領養</span>
           </div>
         </div>
-        <div class="pet-card secondary">
-          <div class="pet-avatar cat"></div>
+        <!-- 次要寵物卡片 -->
+        <div v-if="heroPets[1]" class="pet-card secondary">
+          <div class="pet-avatar" :class="getSpeciesClass(heroPets[1].species)">
+            <img v-if="heroPets[1].mainPhoto" :src="heroPets[1].mainPhoto" :alt="heroPets[1].name" />
+          </div>
           <div class="pet-info">
-            <h4>豆花 · 成貓</h4>
-            <span class="tag">已結紮</span>
+            <h4>{{ formatPetTitle(heroPets[1]) }}</h4>
+            <span v-if="heroPets[1].isNeutered" class="tag">已結紮</span>
+            <span v-else-if="heroPets[1].isVaccinated" class="tag">疫苗齊全</span>
           </div>
         </div>
+        <!-- 沒有資料時的預設顯示 -->
+        <template v-if="!loading && heroPets.length === 0">
+          <div class="pet-card main">
+            <div class="pet-avatar dog"></div>
+            <div class="pet-info">
+              <h3>等待上架</h3>
+              <p>還沒有待領養的毛孩</p>
+              <span class="tag">即將上架</span>
+            </div>
+          </div>
+        </template>
       </div>
     </section>
 
@@ -116,16 +134,6 @@
       </div>
     </section>
 
-    <!-- 呼籲捐款 -->
-    <section class="section donate-call">
-      <div class="donate-box">
-        <div>
-          <h2>沒有打算領養，也能幫助牠們一把</h2>
-          <p>你的每一筆小額捐款，都能化作食物、醫療與中途資源，讓更多毛孩等到真正的家。</p>
-        </div>
-        <router-link to="/donate" class="btn primary">前往捐款平台</router-link>
-      </div>
-    </section>
 
   </div>
 </template>
@@ -135,8 +143,15 @@ import { ref, onMounted } from 'vue';
 import { getAllPets, getPetPhotos } from '../utils/pets.js';
 
 const featuredPets = ref([]);
+const heroPets = ref([]); // Hero 區塊顯示的寵物（前 2 隻）
 const loading = ref(true);
 const error = ref('');
+
+// 隨機選擇陣列中的元素
+function getRandomItems(array, count) {
+  const shuffled = [...array].sort(() => 0.5 - Math.random());
+  return shuffled.slice(0, count);
+}
 
 // 載入精選寵物
 async function loadFeaturedPets() {
@@ -144,7 +159,8 @@ async function loadFeaturedPets() {
   error.value = '';
 
   try {
-    const result = await getAllPets(3);
+    // 載入所有寵物（不限制數量）
+    const result = await getAllPets(1000); // 設定一個很大的數字以獲取所有寵物
 
     if (result.success) {
       // 為每個寵物載入第一張照片
@@ -159,6 +175,15 @@ async function loadFeaturedPets() {
           };
         })
       );
+
+      // 隨機選擇 2 隻給 hero 區塊
+      if (petsWithPhotos.length >= 2) {
+        heroPets.value = getRandomItems(petsWithPhotos, 2);
+      } else {
+        heroPets.value = petsWithPhotos;
+      }
+
+      // 所有寵物都顯示在精選區塊
       featuredPets.value = petsWithPhotos;
     } else {
       error.value = result.message;
@@ -175,10 +200,6 @@ async function loadFeaturedPets() {
 function formatPetTitle(pet) {
   const parts = [pet.name];
   if (pet.breed) parts.push(pet.breed);
-  if (pet.size) {
-    const sizeMap = { small: '小型', medium: '中型', large: '大型' };
-    parts.push(sizeMap[pet.size] || pet.size);
-  }
   if (pet.age !== null && pet.age !== undefined) {
     parts.push(`${pet.age} 歲`);
   }
@@ -322,6 +343,13 @@ onMounted(() => {
   background: linear-gradient(135deg, #f97316, #fbbf24);
   position: relative;
   overflow: hidden;
+  flex-shrink: 0;
+}
+
+.pet-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .pet-avatar.dog::before,
@@ -332,6 +360,14 @@ onMounted(() => {
   inset: 12px;
   border-radius: 14px;
   background: #fefce8;
+  z-index: 1;
+}
+
+.pet-avatar.dog img,
+.pet-avatar.cat img,
+.pet-avatar.other img {
+  position: relative;
+  z-index: 2;
 }
 
 .pet-avatar.cat {
@@ -499,7 +535,7 @@ onMounted(() => {
 }
 
 .pet-photo {
-  height: 120px;
+  height: 200px;
   background: linear-gradient(135deg, #f97316, #fbbf24);
   position: relative;
   overflow: hidden;

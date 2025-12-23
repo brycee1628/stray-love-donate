@@ -39,14 +39,24 @@ export async function getPetById(petId) {
 
         if (petSnap.exists()) {
             return {
-                id: petSnap.id,
-                ...petSnap.data()
+                success: true,
+                pet: {
+                    id: petSnap.id,
+                    ...petSnap.data()
+                }
             };
         }
-        return null;
+        return {
+            success: false,
+            message: '找不到寵物資料'
+        };
     } catch (error) {
         console.error('取得寵物資料失敗:', error);
-        return null;
+        return {
+            success: false,
+            message: `取得寵物資料失敗: ${error.message}`,
+            error: error
+        };
     }
 }
 
@@ -185,6 +195,101 @@ export async function getPetPhotos(petId) {
         return {
             success: false,
             message: `取得寵物照片失敗: ${error.message}`,
+            error: error
+        };
+    }
+}
+
+// 取得所有待審核的寵物（管理員用）
+export async function getPendingReviewPets() {
+    try {
+        // 嘗試使用 where 查詢
+        try {
+            const q = query(
+                petsCollection,
+                where('status', '==', 'PendingReview'),
+                orderBy('createTime', 'desc')
+            );
+            const querySnapshot = await getDocs(q);
+
+            const pets = querySnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+
+            return {
+                success: true,
+                pets: pets
+            };
+        } catch (queryError) {
+            // 如果查詢失敗（可能是因為沒有索引），則取得所有資料並在客戶端過濾
+            console.warn('使用 where 查詢失敗，改為客戶端過濾:', queryError);
+            const querySnapshot = await getDocs(petsCollection);
+
+            let pets = querySnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+
+            // 在客戶端過濾：只保留狀態為 'PendingReview' 的寵物
+            pets = pets.filter(pet => pet.status === 'PendingReview');
+
+            // 在客戶端排序
+            if (pets.length > 0 && pets[0].createTime) {
+                pets.sort((a, b) => {
+                    const timeA = a.createTime?.toMillis ? a.createTime.toMillis() : (a.createTime?.seconds || 0) * 1000;
+                    const timeB = b.createTime?.toMillis ? b.createTime.toMillis() : (b.createTime?.seconds || 0) * 1000;
+                    return timeB - timeA; // 降序
+                });
+            }
+
+            return {
+                success: true,
+                pets: pets
+            };
+        }
+    } catch (error) {
+        console.error('取得待審核寵物失敗:', error);
+        return {
+            success: false,
+            message: `取得待審核寵物失敗: ${error.message}`,
+            error: error
+        };
+    }
+}
+
+// 審核寵物（通過或拒絕）
+export async function reviewPet(petId, action) {
+    try {
+        const { doc, updateDoc, serverTimestamp } = await import('firebase/firestore');
+        const petRef = doc(db, 'pets', petId);
+
+        let newStatus;
+        if (action === 'approve') {
+            newStatus = 'Available'; // 通過，改為待領養
+        } else if (action === 'reject') {
+            newStatus = 'Rejected'; // 拒絕
+        } else {
+            return {
+                success: false,
+                message: '無效的審核動作'
+            };
+        }
+
+        await updateDoc(petRef, {
+            status: newStatus,
+            updateTime: serverTimestamp()
+        });
+
+        return {
+            success: true,
+            message: `寵物已${action === 'approve' ? '通過審核' : '被拒絕'}`
+        };
+    } catch (error) {
+        console.error('審核寵物失敗:', error);
+        return {
+            success: false,
+            message: `審核失敗: ${error.message}`,
             error: error
         };
     }

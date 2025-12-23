@@ -30,6 +30,26 @@ export async function createPet(petData) {
     }
 }
 
+// 根據 ID 取得單一寵物
+export async function getPetById(petId) {
+    try {
+        const { doc, getDoc } = await import('firebase/firestore');
+        const petRef = doc(db, 'pets', petId);
+        const petSnap = await getDoc(petRef);
+
+        if (petSnap.exists()) {
+            return {
+                id: petSnap.id,
+                ...petSnap.data()
+            };
+        }
+        return null;
+    } catch (error) {
+        console.error('取得寵物資料失敗:', error);
+        return null;
+    }
+}
+
 // 建立寵物照片記錄
 export async function createPetPhoto(photoData) {
     try {

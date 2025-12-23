@@ -139,9 +139,8 @@
 <script setup>
 import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
-import { createPet, createPetPhoto } from '../utils/pets.js';
-import { uploadPetPhoto } from '../utils/storage.js';
-import { validatePetData } from '../utils/validation.js';
+import { Releaser } from '../models/Releaser.js'; // 導入 Releaser 類別
+import { validatePetData } from '../utils/validation.js'; // 導入驗證函數
 
 const router = useRouter();
 
@@ -288,8 +287,16 @@ async function handleSubmit() {
   submitting.value = true;
 
   try {
-    // 1. 先建立寵物資料
-    const petResult = await createPet({
+    // 建立 Releaser 物件（暫時使用臨時資料，等登入功能完成後再改）
+    const releaser = new Releaser({
+      userId: null, // 暫時設為 null，等登入功能完成後再改
+      email: '',
+      name: '',
+      phone: ''
+    });
+
+    // 準備寵物資料
+    const petData = {
       name: formData.name.trim(),
       species: formData.species,
       breed: formData.breed.trim() || null,
@@ -299,69 +306,24 @@ async function handleSubmit() {
       description: formData.description.trim(),
       isVaccinated: formData.isVaccinated,
       isNeutered: formData.isNeutered,
-      isHealthy: formData.isHealthy,
-      releaserId: null // 暫時設為 null，等登入功能完成後再改
-    });
+      isHealthy: formData.isHealthy
+    };
 
-    if (!petResult.success) {
-      errors.value.push(petResult.message);
-      submitting.value = false;
-      return;
-    }
+    // 準備照片檔案陣列
+    const photoFiles = photos.value.map(photo => photo.file);
 
-    const petId = petResult.id;
+    // 呼叫 Releaser 物件的 uploadPet() 方法（UC-02）
+    // 根據序列圖 4.2：參與者呼叫 Releaser 物件的 uploadPet() 方法傳入資料
+    const result = await releaser.uploadPet(petData, photoFiles);
 
-    // 2. 上傳照片
-    const photoUploadResults = [];
-    for (let i = 0; i < photos.value.length; i++) {
-      const photo = photos.value[i];
-      try {
-        // 上傳到 Storage
-        const uploadResult = await uploadPetPhoto(photo.file, petId, i);
-
-        if (uploadResult.success) {
-          // 建立照片記錄
-          const photoRecordResult = await createPetPhoto({
-            petId: petId,
-            photoUrl: uploadResult.url,
-            photoPath: uploadResult.path,
-            order: i
-          });
-
-          if (photoRecordResult.success) {
-            photoUploadResults.push({ success: true, index: i });
-          } else {
-            photoUploadResults.push({ success: false, index: i, error: photoRecordResult.message });
-          }
-        } else {
-          photoUploadResults.push({ success: false, index: i, error: uploadResult.error });
-        }
-      } catch (error) {
-        console.error(`照片 ${i + 1} 上傳失敗:`, error);
-        photoUploadResults.push({ success: false, index: i, error: error.message });
-      }
-    }
-
-    // 3. 檢查結果
-    const successCount = photoUploadResults.filter(r => r.success).length;
-    const failCount = photoUploadResults.filter(r => !r.success).length;
-
-    if (successCount > 0) {
-      successMessage.value = `寵物資料已成功提交！已上傳 ${successCount} 張照片。${failCount > 0 ? `（${failCount} 張照片上傳失敗）` : ''}`;
+    if (result.success) {
+      successMessage.value = result.message;
       resetForm();
-      // 2 秒後跳轉回首頁
       setTimeout(() => {
-        router.push('/');
+        router.push('/'); // 2 秒後跳轉到首頁
       }, 2000);
-    } else if (failCount > 0) {
-      errors.value.push('寵物資料已建立，但所有照片上傳失敗。請檢查 Firebase Storage 設置。');
     } else {
-      successMessage.value = '寵物資料已成功提交！';
-      resetForm();
-      // 2 秒後跳轉回首頁
-      setTimeout(() => {
-        router.push('/');
-      }, 2000);
+      errors.value.push(result.message);
     }
   } catch (error) {
     console.error('提交失敗:', error);

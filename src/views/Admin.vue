@@ -57,13 +57,47 @@
                     </div>
                 </div>
 
-                <div class="admin-sections">
-                    <div class="section-card">
-                        <h2>待審核領養申請</h2>
-                        <p>管理待審核的領養申請</p>
-                        <p class="coming-soon">功能開發中...</p>
-                    </div>
+                <!-- 待審核領養申請列表 -->
+                <div class="pending-applications-section">
+                    <h2>待審核領養申請</h2>
+                    <p class="section-description">管理待審核的領養申請</p>
 
+                    <div v-if="loadingApplications" class="loading-message">載入中...</div>
+                    <div v-else-if="errorApplications" class="error-message">{{ errorApplications }}</div>
+                    <div v-else-if="pendingApplications.length === 0" class="empty-message">目前沒有待審核的領養申請</div>
+                    <div v-else class="applications-list">
+                        <div v-for="app in pendingApplications" :key="app.id" class="application-card">
+                            <div class="application-main">
+                                <h3>申請人：{{ app.applicantName }}</h3>
+                                <p><strong>電子郵件：</strong>{{ app.email }}</p>
+                                <p><strong>聯絡電話：</strong>{{ app.phone }}</p>
+                                <p><strong>寵物 ID：</strong>{{ app.petId }}</p>
+                                <p><strong>居住地址：</strong>{{ app.address }}</p>
+                                <p><strong>居住環境：</strong>{{ app.livingEnvironment }}</p>
+                                <p v-if="app.hasYard !== null"><strong>是否有庭院：</strong>{{ app.hasYard ? '是' : '否' }}</p>
+                                <p><strong>飼養經驗：</strong>{{ app.experience }}</p>
+                                <p><strong>照顧計畫：</strong>{{ app.carePlan }}</p>
+                                <p v-if="app.familyMembers"><strong>家庭成員：</strong>{{ app.familyMembers }}</p>
+                            </div>
+                            <div class="application-actions">
+                                <button @click="handleApproveApplication(app.id)"
+                                    :disabled="reviewingApplications[app.id]" class="btn-approve">
+                                    {{ reviewingApplications[app.id] ? '審核中...' : '通過' }}
+                                </button>
+                                <button @click="handleRejectApplication(app.id)"
+                                    :disabled="reviewingApplications[app.id]" class="btn-reject">
+                                    {{ reviewingApplications[app.id] ? '審核中...' : '拒絕' }}
+                                </button>
+                                <div v-if="applicationMessages[app.id]"
+                                    :class="['review-message', applicationMessages[app.id].type]">
+                                    {{ applicationMessages[app.id].text }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="admin-sections">
                     <div class="section-card">
                         <h2>使用者管理</h2>
                         <p>管理使用者帳號與權限</p>
@@ -71,9 +105,6 @@
                     </div>
                 </div>
 
-                <div class="admin-actions">
-                    <button @click="handleLogout" class="btn-logout">登出</button>
-                </div>
             </div>
         </div>
     </div>
@@ -84,6 +115,7 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuth } from '../composables/useAuth.js';
 import { getPendingReviewPets, reviewPet, getPetPhotos } from '../utils/pets.js';
+import { getPendingAdoptionApplications, reviewAdoptionApplication } from '../utils/adoption.js';
 
 const router = useRouter();
 const { userData, logout } = useAuth();
@@ -94,6 +126,13 @@ const loadingPets = ref(false);
 const errorPets = ref('');
 const reviewing = ref({}); // { petId: boolean }
 const reviewMessages = ref({}); // { petId: { type: 'success'|'error', text: string } }
+
+// 待審核領養申請相關狀態
+const pendingApplications = ref([]);
+const loadingApplications = ref(false);
+const errorApplications = ref('');
+const reviewingApplications = ref({}); // { applicationId: boolean }
+const applicationMessages = ref({}); // { applicationId: { type: 'success'|'error', text: string } }
 
 // 載入待審核寵物列表
 async function loadPendingPets() {
@@ -189,6 +228,70 @@ function getGenderText(gender) {
     return map[gender] || gender;
 }
 
+// 載入待審核領養申請
+async function loadPendingApplications() {
+    loadingApplications.value = true;
+    errorApplications.value = '';
+
+    try {
+        const result = await getPendingAdoptionApplications();
+        if (result.success) {
+            pendingApplications.value = result.applications;
+        } else {
+            errorApplications.value = result.message || '載入待審核領養申請失敗';
+        }
+    } catch (error) {
+        console.error('載入待審核領養申請失敗:', error);
+        errorApplications.value = '載入待審核領養申請失敗，請稍後再試';
+    } finally {
+        loadingApplications.value = false;
+    }
+}
+
+// 領養申請審核通過
+async function handleApproveApplication(applicationId) {
+    await handleReviewApplication(applicationId, 'approve');
+}
+
+// 領養申請審核拒絕
+async function handleRejectApplication(applicationId) {
+    await handleReviewApplication(applicationId, 'reject');
+}
+
+// 處理領養申請審核
+async function handleReviewApplication(applicationId, action) {
+    reviewingApplications.value[applicationId] = true;
+    applicationMessages.value[applicationId] = null;
+
+    try {
+        const result = await reviewAdoptionApplication(applicationId, action);
+        if (result.success) {
+            applicationMessages.value[applicationId] = {
+                type: 'success',
+                text: result.message
+            };
+            // 從列表中移除已審核的申請
+            pendingApplications.value = pendingApplications.value.filter(app => app.id !== applicationId);
+            setTimeout(() => {
+                delete applicationMessages.value[applicationId];
+            }, 3000);
+        } else {
+            applicationMessages.value[applicationId] = {
+                type: 'error',
+                text: result.message || '審核失敗'
+            };
+        }
+    } catch (error) {
+        console.error('審核領養申請失敗:', error);
+        applicationMessages.value[applicationId] = {
+            type: 'error',
+            text: `審核失敗: ${error.message}`
+        };
+    } finally {
+        reviewingApplications.value[applicationId] = false;
+    }
+}
+
 // 處理登出
 async function handleLogout() {
     try {
@@ -208,6 +311,8 @@ onMounted(() => {
 
     // 載入待審核寵物列表
     loadPendingPets();
+    // 載入待審核領養申請
+    loadPendingApplications();
 });
 </script>
 
@@ -436,6 +541,53 @@ h1 {
     background: #fee2e2;
     color: #991b1b;
     border: 1px solid #fca5a5;
+}
+
+.pending-applications-section {
+    margin-bottom: 40px;
+    padding-bottom: 32px;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.applications-list {
+    display: grid;
+    gap: 24px;
+}
+
+.application-card {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.application-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.application-main h3 {
+    font-size: 1.25rem;
+    color: #111827;
+    margin: 0 0 8px;
+}
+
+.application-main p {
+    margin: 0;
+    color: #4b5563;
+    font-size: 0.95rem;
+}
+
+.application-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-end;
 }
 
 .admin-sections {

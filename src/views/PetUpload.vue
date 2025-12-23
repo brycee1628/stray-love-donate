@@ -226,10 +226,6 @@ function validateForm() {
     errors.value.push('請選擇性別');
   }
 
-  if (!formData.size) {
-    errors.value.push('請選擇體型');
-  }
-
   if (!formData.location.trim()) {
     errors.value.push('請輸入所在地區');
   }

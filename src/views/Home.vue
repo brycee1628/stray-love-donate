@@ -641,7 +641,6 @@ onMounted(() => {
 .pet-actions {
   margin-top: auto;
   padding-top: 12px;
-  border-top: 1px solid #e5e7eb;
   flex-shrink: 0;
 }
 

@@ -46,16 +46,6 @@
                 <option value="unknown">未知</option>
               </select>
             </div>
-
-            <div class="form-group">
-              <label for="size">體型 <span class="required">*</span></label>
-              <select id="size" v-model="formData.size" required>
-                <option value="">請選擇</option>
-                <option value="small">小型</option>
-                <option value="medium">中型</option>
-                <option value="large">大型</option>
-              </select>
-            </div>
           </div>
         </section>
 
@@ -158,7 +148,6 @@ const formData = reactive({
   breed: '',
   age: null,
   gender: '',
-  size: '',
   location: '',
   description: '',
   isVaccinated: false,
@@ -264,7 +253,6 @@ function resetForm() {
     breed: '',
     age: null,
     gender: '',
-    size: '',
     location: '',
     description: '',
     isVaccinated: false,
@@ -295,7 +283,6 @@ async function handleSubmit() {
       breed: formData.breed.trim() || null,
       age: formData.age,
       gender: formData.gender,
-      size: formData.size,
       location: formData.location.trim(),
       description: formData.description.trim(),
       isVaccinated: formData.isVaccinated,

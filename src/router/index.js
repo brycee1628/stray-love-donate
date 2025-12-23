@@ -4,6 +4,7 @@ import PetUpload from '../views/PetUpload.vue';
 import Filter from '../views/Filter.vue';
 import Login from '../views/Login.vue';
 import Nearby from '../views/Nearby.vue';
+import { requireAuth, requireAdmin, redirectIfAuthenticated } from './guards.js';
 
 const routes = [
     {
@@ -14,7 +15,8 @@ const routes = [
     {
         path: '/pet-upload',
         name: 'PetUpload',
-        component: PetUpload
+        component: PetUpload,
+        beforeEnter: requireAuth
     },
     {
         path: '/filter',
@@ -24,7 +26,8 @@ const routes = [
     {
         path: '/login',
         name: 'Login',
-        component: Login
+        component: Login,
+        beforeEnter: redirectIfAuthenticated
     },
     {
         path: '/nearby',
@@ -35,6 +38,12 @@ const routes = [
         path: '/adoption/:id',
         name: 'Adoption',
         component: () => import('../views/Adoption.vue')
+    },
+    {
+        path: '/admin',
+        name: 'Admin',
+        component: () => import('../views/Admin.vue'),
+        beforeEnter: requireAdmin
     }
 ];
 

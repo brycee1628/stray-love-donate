@@ -2,6 +2,7 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import { getAuth } from 'firebase/auth';
 import { firebaseConfig } from './firebase-config.js';
 
 // 初始化 Firebase 應用程式
@@ -13,6 +14,9 @@ const db = getFirestore(app);
 // 初始化 Storage
 const storage = getStorage(app);
 
+// 初始化 Authentication
+const auth = getAuth(app);
+
 // 匯出實例
-export { db, storage };
+export { db, storage, auth };
 

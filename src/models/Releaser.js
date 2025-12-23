@@ -1,13 +1,12 @@
 // 送養人類別
 // 繼承自 User 類別
 
-export class Releaser {
+import { User } from './User.js';
+
+export class Releaser extends User {
     constructor(userData) {
-        this.userId = userData.userId || null;
-        this.email = userData.email || '';
-        this.name = userData.name || '';
-        this.phone = userData.phone || '';
-        this.status = userData.status || 'Active';
+        super(userData);
+        // Releaser 特有的屬性可以在這裡添加
     }
 
     // 上傳寵物資訊（UC-02）
@@ -24,7 +23,7 @@ export class Releaser {
 
             // 2. 透過 save() 方法將其狀態初始化為 PendingReview
             const saveResult = await pet.save();
-            
+
             if (!saveResult.success) {
                 return {
                     success: false,
@@ -47,7 +46,7 @@ export class Releaser {
                     });
 
                     const uploadResult = await petPhoto.upload(photoFile);
-                    
+
                     if (uploadResult.success) {
                         photoUploadResults.push({ success: true, index: i });
                     } else {
@@ -94,15 +93,9 @@ export class Releaser {
         }
     }
 
-    // 轉換為 Firestore 格式
+    // 轉換為 Firestore 格式（繼承自 User）
     toFirestore() {
-        return {
-            userId: this.userId,
-            email: this.email,
-            name: this.name,
-            phone: this.phone,
-            status: this.status
-        };
+        return super.toFirestore();
     }
 
     // 從 Firestore 建立物件

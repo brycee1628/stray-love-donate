@@ -21,7 +21,10 @@
           <div class="pet-info">
             <h3>{{ formatPetTitle(heroPets[0]) }}</h3>
             <p>{{ heroPets[0].description || '等待一個溫暖的家' }}</p>
-            <span class="tag tag-green">待領養</span>
+            <div class="pet-info-actions">
+              <span class="tag tag-green">待領養</span>
+              <router-link :to="`/adoption/${heroPets[0].id}`" class="hero-apply-link">申請領養</router-link>
+            </div>
           </div>
         </div>
         <!-- 次要寵物卡片 -->
@@ -31,8 +34,11 @@
           </div>
           <div class="pet-info">
             <h4>{{ formatPetTitle(heroPets[1]) }}</h4>
-            <span v-if="heroPets[1].isNeutered" class="tag">已結紮</span>
-            <span v-else-if="heroPets[1].isVaccinated" class="tag">疫苗齊全</span>
+            <div class="pet-info-actions">
+              <span v-if="heroPets[1].isNeutered" class="tag">已結紮</span>
+              <span v-else-if="heroPets[1].isVaccinated" class="tag">疫苗齊全</span>
+              <router-link :to="`/adoption/${heroPets[1].id}`" class="hero-apply-link">申請</router-link>
+            </div>
           </div>
         </div>
         <!-- 沒有資料時的預設顯示 -->
@@ -123,6 +129,11 @@
               <span class="tag">{{ pet.location || '未指定地區' }}</span>
               <span v-if="pet.isVaccinated" class="tag tag-green">疫苗齊全</span>
               <span v-if="pet.isNeutered" class="tag">已結紮</span>
+            </div>
+            <div class="pet-actions">
+              <router-link :to="`/adoption/${pet.id}`" class="btn-apply">
+                申請領養
+              </router-link>
             </div>
           </div>
         </article>
@@ -396,6 +407,25 @@ onMounted(() => {
   color: #6b7280;
 }
 
+.pet-info-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.hero-apply-link {
+  font-size: 0.75rem;
+  color: #16a085;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.hero-apply-link:hover {
+  text-decoration: underline;
+}
+
 .tag {
   display: inline-flex;
   align-items: center;
@@ -582,6 +612,10 @@ onMounted(() => {
 
 .pet-body {
   padding: 14px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  min-height: 0;
 }
 
 .pet-body h3 {
@@ -593,6 +627,8 @@ onMounted(() => {
   margin: 0;
   font-size: 0.9rem;
   color: #6b7280;
+  flex-grow: 1;
+  min-height: 40px;
 }
 
 .pet-meta {
@@ -600,6 +636,53 @@ onMounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+.pet-actions {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.btn-apply {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  background: #16a085;
+  color: #ffffff;
+  text-decoration: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: background 0.2s;
+  width: 100%;
+  height: 40px;
+  box-sizing: border-box;
+}
+
+.btn-apply:hover {
+  background: #13866f;
+}
+
+.pet-info-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.hero-apply-link {
+  font-size: 0.75rem;
+  color: #16a085;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.hero-apply-link:hover {
+  text-decoration: underline;
 }
 
 .donate-call {

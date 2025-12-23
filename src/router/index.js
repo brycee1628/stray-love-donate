@@ -31,6 +31,11 @@ const routes = [
         name: 'Nearby',
         component: Nearby
     },
+    {
+        path: '/adoption/:id',
+        name: 'Adoption',
+        component: () => import('../views/Adoption.vue')
+    }
 ];
 
 const router = createRouter({

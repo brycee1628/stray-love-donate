@@ -4,7 +4,6 @@ import PetUpload from '../views/PetUpload.vue';
 import Filter from '../views/Filter.vue';
 import Login from '../views/Login.vue';
 import Nearby from '../views/Nearby.vue';
-import Donate from '../views/Donate.vue';
 
 const routes = [
     {

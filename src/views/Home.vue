@@ -336,7 +336,7 @@ onMounted(() => {
 }
 
 .pet-card.main {
-  top: 18px;
+  top: 0;
   right: 0;
   width: 260px;
 }

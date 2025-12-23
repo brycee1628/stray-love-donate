@@ -5,8 +5,7 @@
       <router-link to="/pet-upload">寵物上架</router-link> |
       <router-link to="/filter">條件篩選</router-link> |
       <router-link to="/login">使用者資料登入</router-link> |
-      <router-link to="/nearby">鄰近站點搜尋</router-link> |
-      <router-link to="/donate">抖內平台</router-link>
+      <router-link to="/nearby">鄰近站點搜尋</router-link>
     </nav>
     <router-view />
   </div>
@@ -15,7 +14,7 @@
 <script>
 export default {
   name: 'App'
-}
+};
 </script>
 
 <style>
@@ -44,4 +43,3 @@ nav a.router-link-active {
   color: #2c3e50;
 }
 </style>
-

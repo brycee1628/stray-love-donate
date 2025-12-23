@@ -32,11 +32,6 @@ const routes = [
         name: 'Nearby',
         component: Nearby
     },
-    {
-        path: '/donate',
-        name: 'Donate',
-        component: Donate
-    }
 ];
 
 const router = createRouter({

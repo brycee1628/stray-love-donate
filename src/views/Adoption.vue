@@ -142,11 +142,13 @@
 import { ref, reactive, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { Adopter } from '../models/Adopter.js';
+import { useAuth } from '../composables/useAuth.js'; // 導入認證狀態
 import { isPetAvailable } from '../utils/adoption.js';
 import { getPetById } from '../utils/pets.js';
 
 const router = useRouter();
 const route = useRoute();
+const { currentUser, userData } = useAuth();
 
 // 寵物資訊
 const petInfo = ref(null);
@@ -259,12 +261,12 @@ async function handleSubmit() {
     submitting.value = true;
 
     try {
-        // 建立 Adopter 物件（暫時使用臨時資料，等登入功能完成後再改）
+        // 建立 Adopter 物件（使用實際登入的使用者資訊，若未登入則使用表單資料）
         const adopter = new Adopter({
-            userId: null, // 暫時設為 null，等登入功能完成後再改
-            email: formData.email.trim(),
-            name: formData.applicantName.trim(),
-            phone: formData.phone.trim()
+            userId: currentUser.value?.uid || userData.value?.userId || null,
+            email: userData.value?.email || formData.email.trim() || '',
+            name: userData.value?.name || formData.applicantName.trim() || '',
+            phone: userData.value?.phone || formData.phone.trim() || ''
         });
 
         // 呼叫 Adopter 物件的 submitApplication() 方法（UC-05）

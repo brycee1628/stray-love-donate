@@ -141,8 +141,10 @@ import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
 import { Releaser } from '../models/Releaser.js'; // 導入 Releaser 類別
 import { validatePetData } from '../utils/validation.js'; // 導入驗證函數
+import { useAuth } from '../composables/useAuth.js'; // 導入認證狀態
 
 const router = useRouter();
+const { currentUser, userData } = useAuth();
 
 // 表單資料
 const formData = reactive({
@@ -287,12 +289,12 @@ async function handleSubmit() {
   submitting.value = true;
 
   try {
-    // 建立 Releaser 物件（暫時使用臨時資料，等登入功能完成後再改）
+    // 建立 Releaser 物件（使用實際登入的使用者資訊）
     const releaser = new Releaser({
-      userId: null, // 暫時設為 null，等登入功能完成後再改
-      email: '',
-      name: '',
-      phone: ''
+      userId: currentUser.value?.uid || userData.value?.userId || null,
+      email: userData.value?.email || currentUser.value?.email || '',
+      name: userData.value?.name || '',
+      phone: userData.value?.phone || ''
     });
 
     // 準備寵物資料

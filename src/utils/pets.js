@@ -295,3 +295,132 @@ export async function reviewPet(petId, action) {
     }
 }
 
+// 條件篩選搜尋寵物（UC-04）
+// filters: { species, age, gender, location }
+// sortBy: 'createTime' | 'location' | 'name'
+// sortOrder: 'asc' | 'desc'
+// page: 頁碼（從 1 開始）
+// pageSize: 每頁數量
+export async function searchPets(filters = {}, sortBy = 'createTime', sortOrder = 'desc', page = 1, pageSize = 6) {
+    try {
+        // 先取得所有 Available 的寵物
+        let querySnapshot;
+        try {
+            const q = query(
+                petsCollection,
+                where('status', '==', 'Available'),
+                orderBy('createTime', 'desc')
+            );
+            querySnapshot = await getDocs(q);
+        } catch (queryError) {
+            // 如果查詢失敗（可能是因為沒有索引），則取得所有資料並在客戶端過濾
+            console.warn('使用 where 查詢失敗，改為客戶端過濾:', queryError);
+            try {
+                const q = query(
+                    petsCollection,
+                    orderBy('createTime', 'desc')
+                );
+                querySnapshot = await getDocs(q);
+            } catch (orderByError) {
+                console.warn('使用 orderBy 失敗，改為獲取所有資料:', orderByError);
+                querySnapshot = await getDocs(petsCollection);
+            }
+        }
+
+        // 轉換為陣列
+        let pets = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+
+        // 客戶端過濾：只保留狀態為 'Available' 的寵物
+        pets = pets.filter(pet => pet.status === 'Available');
+
+        // 應用篩選條件
+        if (filters.species && filters.species !== 'all') {
+            pets = pets.filter(pet => pet.species === filters.species);
+        }
+        if (filters.age !== null && filters.age !== undefined && filters.age !== 'all') {
+            pets = pets.filter(pet => {
+                const petAge = pet.age;
+                if (petAge === null || petAge === undefined) return false;
+                // 支援年齡範圍篩選
+                if (typeof filters.age === 'string') {
+                    if (filters.age === 'young') return petAge <= 1;
+                    if (filters.age === 'adult') return petAge > 1 && petAge <= 7;
+                    if (filters.age === 'senior') return petAge > 7;
+                }
+                // 精確年齡
+                return petAge === filters.age;
+            });
+        }
+        if (filters.gender && filters.gender !== 'all') {
+            pets = pets.filter(pet => pet.gender === filters.gender);
+        }
+        if (filters.location && filters.location !== 'all') {
+            pets = pets.filter(pet => {
+                // 支援部分匹配：例如選擇「台北市」可以匹配「台北市信義區」、「台北市大安區」等
+                // 使用 startsWith 確保只匹配以該城市開頭的地址，避免誤匹配
+                const petLocation = pet.location || '';
+                return petLocation.startsWith(filters.location);
+            });
+        }
+
+        // 應用排序
+        pets.sort((a, b) => {
+            let aValue, bValue;
+
+            if (sortBy === 'createTime') {
+                aValue = a.createTime?.toMillis ? a.createTime.toMillis() : (a.createTime?.seconds || 0) * 1000;
+                bValue = b.createTime?.toMillis ? b.createTime.toMillis() : (b.createTime?.seconds || 0) * 1000;
+            } else if (sortBy === 'location') {
+                aValue = (a.location || '').toLowerCase();
+                bValue = (b.location || '').toLowerCase();
+            } else if (sortBy === 'name') {
+                aValue = (a.name || '').toLowerCase();
+                bValue = (b.name || '').toLowerCase();
+            } else {
+                // 預設使用 createTime
+                aValue = a.createTime?.toMillis ? a.createTime.toMillis() : (a.createTime?.seconds || 0) * 1000;
+                bValue = b.createTime?.toMillis ? b.createTime.toMillis() : (b.createTime?.seconds || 0) * 1000;
+            }
+
+            if (sortBy === 'createTime') {
+                return sortOrder === 'desc' ? bValue - aValue : aValue - bValue;
+            } else {
+                // 字串排序
+                if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+                if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+                return 0;
+            }
+        });
+
+        // 計算分頁
+        const total = pets.length;
+        const totalPages = Math.ceil(total / pageSize);
+        const startIndex = (page - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        const paginatedPets = pets.slice(startIndex, endIndex);
+
+        return {
+            success: true,
+            pets: paginatedPets,
+            pagination: {
+                page,
+                pageSize,
+                total,
+                totalPages,
+                hasNextPage: page < totalPages,
+                hasPrevPage: page > 1
+            }
+        };
+    } catch (error) {
+        console.error('搜尋寵物失敗:', error);
+        return {
+            success: false,
+            message: `搜尋失敗: ${error.message}`,
+            error: error
+        };
+    }
+}
+

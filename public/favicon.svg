@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="heartGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#16a085;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0f766e;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- 主愛心 -->
+  <path d="M50,88 C50,88 12,58 12,36 C12,24 20,16 32,16 C40,16 46,20 50,28 C54,20 60,16 68,16 C80,16 88,24 88,36 C88,58 50,88 50,88 Z" 
+        fill="url(#heartGradient)" 
+        stroke="#0f766e" 
+        stroke-width="1.5"/>
+  <!-- 內部裝飾：小愛心 -->
+  <path d="M50,60 C50,60 38,52 38,44 C38,40 40,38 44,38 C46,38 48,39 50,42 C52,39 54,38 56,38 C60,38 62,40 62,44 C62,52 50,60 50,60 Z" 
+        fill="#ffffff" 
+        opacity="0.3"/>
+  <!-- 高光效果 -->
+  <ellipse cx="42" cy="32" rx="8" ry="6" fill="#ffffff" opacity="0.4"/>
+</svg>
+

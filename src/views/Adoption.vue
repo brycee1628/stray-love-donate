@@ -285,10 +285,10 @@ async function handleSubmit() {
 
         if (result.success) {
             successMessage.value = result.message;
-            // 3 秒後跳轉回首頁
+            // 1 秒後跳轉回首頁
             setTimeout(() => {
                 router.push('/');
-            }, 3000);
+            }, 1000);
         } else {
             errors.value.push(result.message);
         }

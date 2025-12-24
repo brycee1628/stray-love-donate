@@ -320,8 +320,8 @@ async function handleSubmit() {
       successMessage.value = result.message;
       resetForm();
       setTimeout(() => {
-        router.push('/'); // 2 秒後跳轉到首頁
-      }, 2000);
+        router.push('/'); // 1 秒後跳轉到首頁
+      }, 1000);
     } else {
       errors.value.push(result.message);
     }

@@ -57,54 +57,70 @@ export async function createAuditLog(actionType, details) {
 // 取得稽核記錄列表
 export async function getAuditLogs(filters = {}, limitCount = 100) {
     try {
-        let q = query(auditLogsCollection, orderBy('timestamp', 'desc'));
+        // 檢查是否有篩選條件
+        const hasFilters = filters.actionType || filters.adminId || filters.targetId || filters.targetType;
 
-        // 應用篩選條件
-        if (filters.actionType) {
-            q = query(q, where('actionType', '==', filters.actionType));
-        }
-        if (filters.adminId) {
-            q = query(q, where('adminId', '==', filters.adminId));
-        }
-        if (filters.targetId) {
-            q = query(q, where('targetId', '==', filters.targetId));
-        }
-        if (filters.targetType) {
-            q = query(q, where('targetType', '==', filters.targetType));
-        }
-
-        const querySnapshot = await getDocs(q);
-        let logs = querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        }));
-
-        // 如果查詢失敗（可能是因為沒有索引），則取得所有資料並在客戶端過濾
-        if (filters.actionType && logs.length === 0) {
+        // 如果有篩選條件，先嘗試使用 Firestore 查詢
+        if (hasFilters) {
             try {
-                const allQuery = query(auditLogsCollection, orderBy('timestamp', 'desc'));
-                const allSnapshot = await getDocs(allQuery);
-                logs = allSnapshot.docs.map(doc => ({
+                let q = query(auditLogsCollection, orderBy('timestamp', 'desc'));
+
+                // 應用篩選條件
+                if (filters.actionType) {
+                    q = query(q, where('actionType', '==', filters.actionType));
+                }
+                if (filters.adminId) {
+                    q = query(q, where('adminId', '==', filters.adminId));
+                }
+                if (filters.targetId) {
+                    q = query(q, where('targetId', '==', filters.targetId));
+                }
+                if (filters.targetType) {
+                    q = query(q, where('targetType', '==', filters.targetType));
+                }
+
+                const querySnapshot = await getDocs(q);
+                let logs = querySnapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
                 }));
 
-                // 客戶端過濾
-                if (filters.actionType) {
-                    logs = logs.filter(log => log.actionType === filters.actionType);
+                // 限制數量
+                if (limitCount && limitCount > 0) {
+                    logs = logs.slice(0, limitCount);
                 }
-                if (filters.adminId) {
-                    logs = logs.filter(log => log.adminId === filters.adminId);
-                }
-                if (filters.targetId) {
-                    logs = logs.filter(log => log.targetId === filters.targetId);
-                }
-                if (filters.targetType) {
-                    logs = logs.filter(log => log.targetType === filters.targetType);
-                }
-            } catch (error) {
-                console.warn('使用 where 查詢失敗，改為客戶端過濾:', error);
+
+                return {
+                    success: true,
+                    logs: logs
+                };
+            } catch (firestoreError) {
+                // 如果 Firestore 查詢失敗（通常是因為缺少索引），降級為客戶端過濾
+                console.warn('Firestore 查詢失敗，改用客戶端過濾:', firestoreError.message);
+                // 繼續執行客戶端過濾邏輯
             }
+        }
+
+        // 降級方案：取得所有資料並在客戶端過濾
+        const allQuery = query(auditLogsCollection, orderBy('timestamp', 'desc'));
+        const allSnapshot = await getDocs(allQuery);
+        let logs = allSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+
+        // 客戶端過濾
+        if (filters.actionType) {
+            logs = logs.filter(log => log.actionType === filters.actionType);
+        }
+        if (filters.adminId) {
+            logs = logs.filter(log => log.adminId === filters.adminId);
+        }
+        if (filters.targetId) {
+            logs = logs.filter(log => log.targetId === filters.targetId);
+        }
+        if (filters.targetType) {
+            logs = logs.filter(log => log.targetType === filters.targetType);
         }
 
         // 限制數量

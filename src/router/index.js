@@ -44,6 +44,24 @@ const routes = [
         name: 'Admin',
         component: () => import('../views/Admin.vue'),
         beforeEnter: requireAdmin
+    },
+    {
+        path: '/admin/pet-review',
+        name: 'PetReview',
+        component: () => import('../views/PetReview.vue'),
+        beforeEnter: requireAdmin
+    },
+    {
+        path: '/admin/user-management',
+        name: 'UserManagement',
+        component: () => import('../views/UserManagement.vue'),
+        beforeEnter: requireAdmin
+    },
+    {
+        path: '/admin/audit-log',
+        name: 'AuditLog',
+        component: () => import('../views/AuditLog.vue'),
+        beforeEnter: requireAdmin
     }
 ];
 

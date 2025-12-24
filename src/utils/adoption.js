@@ -185,8 +185,8 @@ export async function getPendingAdoptionApplications() {
     }
 }
 
-// 審核領養申請（通過或拒絕，UC-05）
-export async function reviewAdoptionApplication(applicationId, action) {
+// 審核領養申請（通過或拒絕，UC-05、UC-06：記錄稽核軌跡）
+export async function reviewAdoptionApplication(applicationId, action, adminInfo = null, reason = null) {
     try {
         const applicationRef = doc(db, 'adoptionApplications', applicationId);
         const applicationSnap = await getDoc(applicationRef);
@@ -199,6 +199,7 @@ export async function reviewAdoptionApplication(applicationId, action) {
         }
 
         const applicationData = applicationSnap.data();
+        const previousStatus = applicationData.status;
 
         let newStatus;
         if (action === 'approve') {
@@ -218,12 +219,40 @@ export async function reviewAdoptionApplication(applicationId, action) {
             updateTime: serverTimestamp()
         });
 
+        let petPreviousStatus = null;
         // 若通過審核，將對應寵物狀態改為 Adopted（已領養）
         if (action === 'approve' && applicationData.petId) {
             const petRef = doc(db, 'pets', applicationData.petId);
-            await updateDoc(petRef, {
-                status: 'Adopted',
-                updateTime: serverTimestamp()
+            const petSnap = await getDoc(petRef);
+            if (petSnap.exists()) {
+                petPreviousStatus = petSnap.data().status;
+                await updateDoc(petRef, {
+                    status: 'Adopted',
+                    updateTime: serverTimestamp()
+                });
+            }
+        }
+
+        // 記錄稽核軌跡（UC-06）
+        if (adminInfo) {
+            const { createAuditLog, AuditActionType } = await import('./audit.js');
+            const actionType = action === 'approve' ? AuditActionType.ADOPTION_APPROVE : AuditActionType.ADOPTION_REJECT;
+            await createAuditLog(actionType, {
+                adminId: adminInfo.userId || adminInfo.uid,
+                adminEmail: adminInfo.email,
+                adminName: adminInfo.name,
+                targetId: applicationId,
+                targetType: 'adoption',
+                action: action,
+                reason: reason,
+                previousStatus: previousStatus,
+                newStatus: newStatus,
+                metadata: {
+                    petId: applicationData.petId || null,
+                    applicantName: applicationData.applicantName || null,
+                    petPreviousStatus: petPreviousStatus,
+                    petNewStatus: action === 'approve' ? 'Adopted' : null
+                }
             });
         }
 

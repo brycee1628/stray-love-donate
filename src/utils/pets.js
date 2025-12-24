@@ -258,11 +258,22 @@ export async function getPendingReviewPets() {
     }
 }
 
-// 審核寵物（通過或拒絕）
-export async function reviewPet(petId, action) {
+// 審核寵物（通過或拒絕，UC-06：記錄稽核軌跡）
+export async function reviewPet(petId, action, adminInfo = null, reason = null) {
     try {
-        const { doc, updateDoc, serverTimestamp } = await import('firebase/firestore');
+        const { doc, updateDoc, getDoc, serverTimestamp } = await import('firebase/firestore');
         const petRef = doc(db, 'pets', petId);
+
+        // 取得寵物當前狀態
+        const petSnap = await getDoc(petRef);
+        if (!petSnap.exists()) {
+            return {
+                success: false,
+                message: '找不到寵物資料'
+            };
+        }
+
+        const previousStatus = petSnap.data().status;
 
         let newStatus;
         if (action === 'approve') {
@@ -280,6 +291,26 @@ export async function reviewPet(petId, action) {
             status: newStatus,
             updateTime: serverTimestamp()
         });
+
+        // 記錄稽核軌跡（UC-06）
+        if (adminInfo) {
+            const { createAuditLog, AuditActionType } = await import('./audit.js');
+            const actionType = action === 'approve' ? AuditActionType.PET_REVIEW_APPROVE : AuditActionType.PET_REVIEW_REJECT;
+            await createAuditLog(actionType, {
+                adminId: adminInfo.userId || adminInfo.uid,
+                adminEmail: adminInfo.email,
+                adminName: adminInfo.name,
+                targetId: petId,
+                targetType: 'pet',
+                action: action,
+                reason: reason,
+                previousStatus: previousStatus,
+                newStatus: newStatus,
+                metadata: {
+                    petName: petSnap.data().name || null
+                }
+            });
+        }
 
         return {
             success: true,

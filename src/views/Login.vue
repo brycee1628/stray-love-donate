@@ -1,7 +1,7 @@
 <template>
   <div class="login">
     <div class="login-container">
-      <h1>使用者身份驗證</h1>
+      <h1>登入會員</h1>
 
       <!-- 標籤切換 -->
       <div class="tabs">

@@ -225,16 +225,18 @@ async function handleRegister() {
 
     if (result.success) {
       registerSuccess.value = result.message;
-      // 3 秒後切換到登入標籤
+      // 註冊成功後，切換到登入標籤，讓用戶手動登入
+      // 等待 1 秒讓用戶看到成功訊息，然後切換到登入標籤
       setTimeout(() => {
         activeTab.value = 'login';
         loginForm.email = registerForm.email;
+        // 清空註冊表單
         registerForm.name = '';
         registerForm.email = '';
         registerForm.phone = '';
         registerForm.password = '';
         registerForm.passwordConfirm = '';
-      }, 3000);
+      }, 1000);
     } else {
       registerErrors.value.push(result.message);
     }

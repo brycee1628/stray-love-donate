@@ -62,10 +62,13 @@ export async function register(email, password, userData) {
             updateTime: serverTimestamp()
         });
 
+        // 註冊後立即登出，要求用戶手動登入
+        await signOut(auth);
+
         return {
             success: true,
             user: user,
-            message: '註冊成功！'
+            message: '註冊成功！請使用您的帳號密碼登入。'
         };
     } catch (error) {
         console.error('註冊失敗:', error);

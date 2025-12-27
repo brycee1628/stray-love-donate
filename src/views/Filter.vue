@@ -13,7 +13,7 @@
           <div class="filter-row">
             <div class="filter-group">
               <label for="species">種類</label>
-              <select id="species" v-model="filters.species" @change="applyFilters">
+              <select id="species" v-model="filters.species">
                 <option value="all">全部</option>
                 <option value="dog">狗</option>
                 <option value="cat">貓</option>
@@ -23,7 +23,7 @@
 
             <div class="filter-group">
               <label for="age">年齡</label>
-              <select id="age" v-model="filters.age" @change="applyFilters">
+              <select id="age" v-model="filters.age">
                 <option value="all">全部</option>
                 <option value="young">幼年（1歲以下）</option>
                 <option value="adult">成年（1-7歲）</option>
@@ -33,7 +33,7 @@
 
             <div class="filter-group">
               <label for="gender">性別</label>
-              <select id="gender" v-model="filters.gender" @change="applyFilters">
+              <select id="gender" v-model="filters.gender">
                 <option value="all">全部</option>
                 <option value="male">公</option>
                 <option value="female">母</option>
@@ -42,7 +42,7 @@
 
             <div class="filter-group">
               <label for="location">地區</label>
-              <select id="location" v-model="filters.location" @change="applyFilters">
+              <select id="location" v-model="filters.location">
                 <option value="all">全部</option>
                 <option value="台北市">台北市</option>
                 <option value="新北市">新北市</option>
@@ -56,6 +56,7 @@
           </div>
 
           <div class="filter-actions">
+            <button @click="applyFilters" class="btn-filter-apply">套用篩選</button>
             <button @click="resetFilters" class="btn-reset">重置篩選</button>
           </div>
         </div>
@@ -348,19 +349,38 @@ onMounted(() => {
 
 .filter-actions {
   display: flex;
-  justify-content: flex-end;
-  padding-top: 8px;
+  justify-content: end;
+  gap: 12px;
+  padding-top: 16px;
+}
+
+.btn-filter-apply,
+.btn-reset {
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 100px;
+  border: 1px solid;
+}
+
+.btn-filter-apply {
+  background: #16a085;
+  color: #ffffff;
+  border-color: #16a085;
+}
+
+.btn-filter-apply:hover {
+  background: #13866f;
+  border-color: #13866f;
 }
 
 .btn-reset {
-  padding: 8px 16px;
   background: #f3f4f6;
   color: #374151;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.2s;
+  border-color: #d1d5db;
 }
 
 .btn-reset:hover {

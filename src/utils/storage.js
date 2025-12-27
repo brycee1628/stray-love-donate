@@ -13,11 +13,11 @@ export async function uploadImage(file, path) {
             };
         }
 
-        // 檢查文件大小（限制 10MB）
-        if (file.size > 10 * 1024 * 1024) {
+        // 檢查文件大小（限制 2MB）
+        if (file.size > 2 * 1024 * 1024) {
             return {
                 success: false,
-                error: '圖片大小不能超過 10MB'
+                error: '圖片大小不能超過 2MB'
             };
         }
 

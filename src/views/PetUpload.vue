@@ -89,7 +89,7 @@
 
           <div class="form-group">
             <label for="photos">上傳照片 <span class="required">*</span></label>
-            <p class="help-text">至少上傳一張照片，最多 5 張（每張不超過 10MB）</p>
+            <p class="help-text">至少上傳一張照片，最多 5 張（每張不超過 2MB）</p>
 
             <div class="photo-upload-area">
               <input id="photos" type="file" accept="image/*" multiple @change="handlePhotoSelect" class="file-input" />
@@ -125,10 +125,10 @@
         <!-- 提交按鈕 -->
         <div class="form-actions">
           <button type="submit" :disabled="submitting" class="btn-primary">
-            {{ submitting ? '提交中...' : '提交上架' }}
+            {{ submitting ? '提交中...' : '確認發布' }}
           </button>
-          <button type="button" @click="resetForm" class="btn-secondary">
-            清除重填
+          <button type="button" @click="handleCancelUpload" class="btn-secondary">
+            取消/返回
           </button>
         </div>
       </form>
@@ -186,8 +186,8 @@ function handlePhotoSelect(event) {
     }
 
     // 檢查文件大小
-    if (file.size > 10 * 1024 * 1024) {
-      errors.value.push(`${file.name} 超過 10MB 限制`);
+    if (file.size > 2 * 1024 * 1024) {
+      errors.value.push(`${file.name} 超過 2MB 限制`);
       return;
     }
 
@@ -275,6 +275,17 @@ function resetForm() {
   photos.value = [];
   errors.value = [];
   successMessage.value = '';
+}
+
+// 取消刊登
+function handleCancelUpload() {
+  // 顯示確認對話框：「確定要離開嗎?」
+  if (confirm('確定要離開嗎?')) {
+    // 確認：清除暫存並導回首頁（不儲存）
+    resetForm();
+    router.push('/');
+  }
+  // 取消：繼續填寫（不做任何動作）
 }
 
 // 提交表單

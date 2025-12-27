@@ -19,15 +19,15 @@ export class Adopter extends User {
             const { Pet } = await import('./Pet.js');
 
             // 取得寵物資料並建立 Pet 物件
-            const petData = await getPetById(applicationData.petId);
-            if (!petData) {
+            const petDataResult = await getPetById(applicationData.petId);
+            if (!petDataResult.success || !petDataResult.pet) {
                 return {
                     success: false,
-                    message: '寵物不存在'
+                    message: petDataResult.message || '寵物不存在'
                 };
             }
 
-            const pet = new Pet({ ...petData, petId: petData.id });
+            const pet = new Pet({ ...petDataResult.pet, petId: petDataResult.pet.id });
 
             // 呼叫 Pet 的 isAvailable() 方法
             const availabilityCheck = await pet.isAvailable();

@@ -62,6 +62,12 @@ const routes = [
         name: 'AuditLog',
         component: () => import('../views/AuditLog.vue'),
         beforeEnter: requireAdmin
+    },
+    {
+        path: '/notifications',
+        name: 'Notifications',
+        component: () => import('../views/Notifications.vue'),
+        beforeEnter: requireAuth
     }
 ];
 

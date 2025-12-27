@@ -141,6 +141,8 @@ async function handleReviewApplication(applicationId, action) {
             };
             // 從列表中移除已審核的申請
             pendingApplications.value = pendingApplications.value.filter(app => app.id !== applicationId);
+            // 觸發通知數量更新（通知 App.vue 重新載入通知數量）
+            window.dispatchEvent(new CustomEvent('notification-updated'));
             setTimeout(() => {
                 delete applicationMessages.value[applicationId];
             }, 3000);

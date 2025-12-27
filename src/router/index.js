@@ -42,7 +42,8 @@ const routes = [
     {
         path: '/adoption/:id',
         name: 'Adoption',
-        component: () => import('../views/Adoption.vue')
+        component: () => import('../views/Adoption.vue'),
+        beforeEnter: requireAuth
     },
     {
         path: '/admin',

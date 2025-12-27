@@ -129,8 +129,8 @@
                     <button type="submit" :disabled="submitting" class="btn-primary">
                         {{ submitting ? '提交中...' : '提交申請' }}
                     </button>
-                    <button type="button" @click="goBack" class="btn-secondary">
-                        返回
+                    <button type="button" @click="handleCancelApplication" class="btn-secondary">
+                        取消申請
                     </button>
                 </div>
             </form>
@@ -302,9 +302,34 @@ async function handleSubmit() {
     }
 }
 
-// 返回
-function goBack() {
-    router.back();
+// 取消申請
+function handleCancelApplication() {
+    // 顯示確認對話框：「尚未儲存,確定離開?」
+    if (confirm('尚未儲存,確定離開?')) {
+        // 確認：清除暫存並導回上一頁
+        resetForm();
+        router.back();
+    }
+    // 取消：繼續填寫（不做任何動作）
+}
+
+// 清除暫存資料
+function resetForm() {
+    // 重置表單資料
+    formData.applicantName = '';
+    formData.phone = '';
+    formData.email = '';
+    formData.address = '';
+    formData.livingEnvironment = '';
+    formData.hasYard = '';
+    formData.experience = '';
+    formData.carePlan = '';
+    formData.familyMembers = '';
+    formData.agreePrivacy = false;
+
+    // 清除錯誤和成功訊息
+    errors.value = [];
+    successMessage.value = '';
 }
 
 // 取得種類文字

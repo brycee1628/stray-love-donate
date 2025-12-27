@@ -49,7 +49,7 @@
         <div v-else class="sites-grid">
           <div v-for="site in filteredSites" :key="site.siteId" class="site-card">
             <div class="site-header">
-              <h3>{{ site.name }}</h3>
+              <h3 @click="goToSiteDetail(site.siteId)" class="site-name-link">{{ site.name }}</h3>
               <span class="region-badge">{{ site.region }}</span>
             </div>
             <div class="site-body">
@@ -96,8 +96,11 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { getAllShelterSites, searchShelterSites, validateKeyword } from '../utils/shelters.js';
 import { ShelterSite } from '../models/ShelterSite.js';
+
+const router = useRouter();
 
 const allSites = ref([]);
 const filteredSites = ref([]);
@@ -182,6 +185,11 @@ function openWebsite(site) {
   if (site instanceof ShelterSite) {
     site.openWebsite();
   }
+}
+
+// 導向站點詳細資訊頁
+function goToSiteDetail(siteId) {
+  router.push(`/nearby/${siteId}`);
 }
 
 onMounted(() => {
@@ -376,6 +384,15 @@ onMounted(() => {
   color: #111827;
   margin: 0;
   flex: 1;
+}
+
+.site-name-link {
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.site-name-link:hover {
+  color: #16a085;
 }
 
 .region-badge {

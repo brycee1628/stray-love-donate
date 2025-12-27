@@ -35,6 +35,11 @@ const routes = [
         component: Nearby
     },
     {
+        path: '/nearby/:siteId',
+        name: 'SiteDetail',
+        component: () => import('../views/SiteDetail.vue')
+    },
+    {
         path: '/adoption/:id',
         name: 'Adoption',
         component: () => import('../views/Adoption.vue')

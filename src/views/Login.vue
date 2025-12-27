@@ -120,11 +120,12 @@
 
 <script setup>
 import { ref, reactive } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { login, register, forgotPassword } from '../utils/auth.js';
 import { getUserById } from '../utils/auth.js';
 
 const router = useRouter();
+const route = useRoute();
 
 // 當前活動的標籤
 const activeTab = ref('login');
@@ -175,15 +176,25 @@ async function handleLogin() {
       if (userResult.success) {
         const user = userResult.user;
 
-        // 根據權限導向（UC-01）
-        // 管理員導向後台，一般使用者導向平台首頁
-        if (user.role === 'Admin') {
-          router.push('/admin');
+        // 檢查是否有 redirect 參數（從路由守衛傳來的）
+        const redirectPath = route.query.redirect;
+        
+        if (redirectPath) {
+          // 有 redirect 參數，導向原本想訪問的頁面
+          router.push(redirectPath);
         } else {
-          router.push('/');
+          // 根據權限導向（UC-01）
+          // 管理員導向後台，一般使用者導向平台首頁
+          if (user.role === 'Admin') {
+            router.push('/admin');
+          } else {
+            router.push('/');
+          }
         }
       } else {
-        router.push('/');
+        // 檢查是否有 redirect 參數
+        const redirectPath = route.query.redirect;
+        router.push(redirectPath || '/');
       }
     } else {
       loginErrors.value.push(result.message);

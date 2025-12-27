@@ -1,9 +1,10 @@
 // 路由守衛
-import { getCurrentUser, getUserById } from '../utils/auth.js';
+import { getCurrentUser, getUserById, waitForAuth } from '../utils/auth.js';
 
 // 檢查使用者是否已登入
 export async function requireAuth(to, from, next) {
-    const currentUser = getCurrentUser();
+    // 等待 Firebase Auth 初始化完成（解決刷新時的問題）
+    const currentUser = await waitForAuth();
 
     if (!currentUser) {
         // 未登入，導向登入頁
@@ -32,7 +33,8 @@ export async function requireAuth(to, from, next) {
 
 // 檢查使用者是否為管理員（UC-06：加強 Session 有效性檢查）
 export async function requireAdmin(to, from, next) {
-    const currentUser = getCurrentUser();
+    // 等待 Firebase Auth 初始化完成（解決刷新時的問題）
+    const currentUser = await waitForAuth();
 
     // 檢查 1：是否有登入（Session 有效性檢查）
     if (!currentUser) {

@@ -384,6 +384,23 @@ export function getCurrentUser() {
     return auth.currentUser;
 }
 
+// 等待 Firebase Auth 初始化完成
+export function waitForAuth() {
+    return new Promise((resolve) => {
+        if (auth.currentUser !== null) {
+            // 已經有使用者，直接返回
+            resolve(auth.currentUser);
+            return;
+        }
+
+        // 等待認證狀態初始化
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            unsubscribe(); // 只監聽一次
+            resolve(user);
+        });
+    });
+}
+
 // 監聽認證狀態變化
 export function onAuthStateChange(callback) {
     return onAuthStateChanged(auth, callback);

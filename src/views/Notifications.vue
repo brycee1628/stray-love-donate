@@ -21,24 +21,18 @@
       </div>
 
       <div v-else class="notifications-list">
-        <div
-          v-for="notification in notifications"
-          :key="notification.id"
+        <div v-for="notification in notifications" :key="notification.id"
           :class="['notification-item', { 'unread': !notification.read }]"
-          @click="handleNotificationClick(notification)"
-        >
+          @click="handleNotificationClick(notification)">
           <div class="notification-content">
             <div class="notification-header">
               <span class="notification-type">{{ getNotificationTypeText(notification.type) }}</span>
               <span class="notification-time">{{ formatTime(notification.createTime) }}</span>
             </div>
             <p class="notification-message">{{ notification.message }}</p>
+            <p v-if="notification.reason" class="notification-reason">拒絕原因：{{ notification.reason }}</p>
             <div v-if="notification.petId" class="notification-actions">
-              <router-link
-                :to="`/filter?petId=${notification.petId}`"
-                class="btn-view-pet"
-                @click.stop
-              >
+              <router-link :to="`/filter?petId=${notification.petId}`" class="btn-view-pet" @click.stop>
                 查看寵物
               </router-link>
             </div>
@@ -125,7 +119,8 @@ function getNotificationTypeText(type) {
   const typeMap = {
     'adoption_approved': '領養申請通過',
     'adoption_rejected': '領養申請拒絕',
-    'adoption_pending': '領養申請待審核'
+    'adoption_pending': '領養申請待審核',
+    'adoption_approved_to_releaser': '寵物已被領養'
   };
   return typeMap[type] || '通知';
 }
@@ -133,7 +128,7 @@ function getNotificationTypeText(type) {
 // 格式化時間
 function formatTime(timestamp) {
   if (!timestamp) return '';
-  
+
   let date;
   if (timestamp.toDate) {
     date = timestamp.toDate();
@@ -286,6 +281,17 @@ onMounted(() => {
   margin: 0 0 12px 0;
 }
 
+.notification-reason {
+  color: #6b7280;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin: 8px 0 12px 0;
+  padding: 8px 12px;
+  background: #f3f4f6;
+  border-radius: 6px;
+  border-left: 3px solid #ef4444;
+}
+
 .notification-actions {
   margin-top: 12px;
 }
@@ -331,4 +337,3 @@ onMounted(() => {
   }
 }
 </style>
-

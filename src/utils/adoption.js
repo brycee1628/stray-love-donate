@@ -438,14 +438,23 @@ export async function reviewAdoptionApplication(applicationId, action, adminInfo
         // 雙向通知：通知申請人審核結果（UC-05）
         if (applicationData.adopterId) {
             try {
+                // 建立通知訊息，拒絕時包含原因
+                let message = action === 'approve'
+                    ? `您的領養申請已通過審核！`
+                    : `很抱歉，您的領養申請未通過審核。`;
+
+                // 如果拒絕且有原因，附加原因到訊息中
+                if (action === 'reject' && reason) {
+                    message += ` 原因：${reason}`;
+                }
+
                 await addDoc(notificationsCollection, {
                     type: action === 'approve' ? 'adoption_approved' : 'adoption_rejected',
                     recipientId: applicationData.adopterId, // 通知申請人
                     applicationId: applicationId,
                     petId: applicationData.petId,
-                    message: action === 'approve'
-                        ? `您的領養申請已通過審核！`
-                        : `很抱歉，您的領養申請未通過審核。`,
+                    message: message,
+                    reason: reason || null, // 儲存原因（如果有）
                     read: false,
                     createTime: serverTimestamp()
                 });
@@ -455,6 +464,30 @@ export async function reviewAdoptionApplication(applicationId, action, adminInfo
             }
         } else {
             console.warn('無法建立通知：申請資料中缺少 adopterId', applicationData);
+        }
+
+        // 審核通過時，通知送養人
+        if (action === 'approve' && applicationData.petId) {
+            try {
+                // 取得寵物資料以獲取送養人 ID
+                const { getPetById } = await import('./pets.js');
+                const petResult = await getPetById(applicationData.petId);
+
+                if (petResult.success && petResult.pet && petResult.pet.releaserId) {
+                    await addDoc(notificationsCollection, {
+                        type: 'adoption_approved_to_releaser',
+                        recipientId: petResult.pet.releaserId, // 通知送養人
+                        applicationId: applicationId,
+                        petId: applicationData.petId,
+                        message: `您上架的寵物已被領養！領養人：${applicationData.applicantName || '未知'}`,
+                        read: false,
+                        createTime: serverTimestamp()
+                    });
+                }
+            } catch (notifyError) {
+                // 通知失敗不影響審核結果
+                console.warn('通知送養人失敗:', notifyError);
+            }
         }
 
         return {

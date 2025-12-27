@@ -75,10 +75,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuth } from '../composables/useAuth.js';
 import { getPendingAdoptionApplications, reviewAdoptionApplication } from '../utils/adoption.js';
+import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { db } from '../../firebase/config.js';
 
 const router = useRouter();
 const { currentUser, userData, logout } = useAuth();
@@ -89,6 +91,7 @@ const loadingApplications = ref(false);
 const errorApplications = ref('');
 const reviewingApplications = ref({}); // { applicationId: boolean }
 const applicationMessages = ref({}); // { applicationId: { type: 'success'|'error', text: string } }
+let applicationsUnsubscribe = null; // 實時監聽的取消函數
 
 // 載入待審核領養申請
 async function loadPendingApplications() {
@@ -110,6 +113,89 @@ async function loadPendingApplications() {
     }
 }
 
+// 設置實時監聽待審核申請
+function setupApplicationsListener() {
+    // 清除舊的監聽器
+    if (applicationsUnsubscribe) {
+        applicationsUnsubscribe();
+        applicationsUnsubscribe = null;
+    }
+
+    try {
+        // 嘗試使用 where + orderBy 查詢
+        const applicationsQuery = query(
+            collection(db, 'adoptionApplications'),
+            where('status', '==', 'Pending'),
+            orderBy('createTime', 'desc')
+        );
+
+        applicationsUnsubscribe = onSnapshot(
+            applicationsQuery,
+            (snapshot) => {
+                // 實時更新列表
+                const applications = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                pendingApplications.value = applications;
+                loadingApplications.value = false;
+            },
+            (error) => {
+                console.warn('監聽申請失敗（可能需要索引），改用降級方案:', error);
+                // 降級為監聽所有申請，然後客戶端過濾
+                setupFallbackApplicationsListener();
+            }
+        );
+    } catch (queryError) {
+        console.warn('建立查詢失敗，使用降級方案:', queryError);
+        setupFallbackApplicationsListener();
+    }
+}
+
+// 降級方案：監聽所有申請並在客戶端過濾
+function setupFallbackApplicationsListener() {
+    // 清除舊的監聽器
+    if (applicationsUnsubscribe) {
+        applicationsUnsubscribe();
+        applicationsUnsubscribe = null;
+    }
+
+    // 設置載入狀態
+    loadingApplications.value = true;
+    errorApplications.value = '';
+
+    // 監聽所有申請（不使用 where 和 orderBy，避免索引問題）
+    const allApplicationsQuery = query(collection(db, 'adoptionApplications'));
+
+    applicationsUnsubscribe = onSnapshot(
+        allApplicationsQuery,
+        (snapshot) => {
+            // 客戶端過濾：只保留狀態為 Pending 的申請
+            let applications = snapshot.docs
+                .map(doc => ({ id: doc.id, ...doc.data() }))
+                .filter(app => app.status === 'Pending');
+
+            // 依 createTime 由新到舊排序
+            if (applications.length > 0 && applications[0].createTime) {
+                applications.sort((a, b) => {
+                    const timeA = a.createTime?.toMillis ? a.createTime.toMillis() : (a.createTime?.seconds || 0) * 1000;
+                    const timeB = b.createTime?.toMillis ? b.createTime.toMillis() : (b.createTime?.seconds || 0) * 1000;
+                    return timeB - timeA;
+                });
+            }
+
+            pendingApplications.value = applications;
+            loadingApplications.value = false;
+            errorApplications.value = '';
+        },
+        (error) => {
+            console.error('降級監聽也失敗:', error);
+            // 如果實時監聽失敗，改用輪詢
+            loadPendingApplications();
+        }
+    );
+}
+
 // 領養申請審核通過
 async function handleApproveApplication(applicationId) {
     await handleReviewApplication(applicationId, 'approve');
@@ -117,11 +203,17 @@ async function handleApproveApplication(applicationId) {
 
 // 領養申請審核拒絕
 async function handleRejectApplication(applicationId) {
-    await handleReviewApplication(applicationId, 'reject');
+    // 顯示輸入原因的對話框
+    const reason = window.prompt('請輸入拒絕原因：');
+    if (reason === null) {
+        // 使用者取消輸入
+        return;
+    }
+    await handleReviewApplication(applicationId, 'reject', reason.trim() || null);
 }
 
 // 處理領養申請審核（UC-06：傳遞管理員資訊以記錄稽核軌跡）
-async function handleReviewApplication(applicationId, action) {
+async function handleReviewApplication(applicationId, action, reason = null) {
     reviewingApplications.value[applicationId] = true;
     applicationMessages.value[applicationId] = null;
 
@@ -133,7 +225,7 @@ async function handleReviewApplication(applicationId, action) {
             name: userData.value?.name || '管理員'
         };
 
-        const result = await reviewAdoptionApplication(applicationId, action, adminInfo);
+        const result = await reviewAdoptionApplication(applicationId, action, adminInfo, reason);
         if (result.success) {
             applicationMessages.value[applicationId] = {
                 type: 'success',
@@ -180,8 +272,24 @@ onMounted(() => {
         return;
     }
 
-    // 載入待審核領養申請
-    loadPendingApplications();
+    // 設置實時監聽，當有新申請時自動更新列表（會自動載入初始資料）
+    setupApplicationsListener();
+
+    // 如果實時監聽失敗，則使用傳統方式載入
+    // 注意：實時監聽成功時會自動更新列表，所以不需要先調用 loadPendingApplications
+
+    // 監聽通知更新事件（作為備用）
+    window.addEventListener('notification-updated', loadPendingApplications);
+});
+
+onUnmounted(() => {
+    // 清除實時監聽
+    if (applicationsUnsubscribe) {
+        applicationsUnsubscribe();
+        applicationsUnsubscribe = null;
+    }
+    // 移除事件監聽
+    window.removeEventListener('notification-updated', loadPendingApplications);
 });
 </script>
 
